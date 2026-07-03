@@ -21,9 +21,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mapping.model.SimpleTypeHolder;
 import org.springframework.data.relational.core.sql.SqlIdentifier;
 import org.springframework.data.relational.core.sql.Table;
 
@@ -64,6 +66,31 @@ class ColumnInfosUnitTests {
 	void multiElementColumnInfos() {
 
 		AggregatePath.ColumnInfos columnInfos = basePath(WithCompositeId.class).getTableInfo().idColumnInfos();
+
+		assertThat(columnInfos.isEmpty()).isFalse();
+		assertThat(columnInfos.any().name()).isEqualTo(SqlIdentifier.quoted("ONE"));
+		assertThrows(IllegalStateException.class, columnInfos::unique);
+		assertThat(columnInfos.toColumnList(TABLE)) //
+				.containsExactly( //
+						TABLE.column(SqlIdentifier.quoted("ONE")), //
+						TABLE.column(SqlIdentifier.quoted("TWO")) //
+				);
+
+		List<String> collector = new ArrayList<>();
+		columnInfos.forEach((ap, ci) -> collector.add(ap.toDotPath() + "+" + ci.name()));
+		assertThat(collector).containsExactly("id.one+\"ONE\"", "id.two+\"TWO\"");
+	}
+
+	@Test // GH-2327
+	void multiElementColumnInfosForEmbeddedIdOfSimpleType() {
+
+		// An embedded id whose type is considered a simple type, as done for example by the jMolecules integration for
+		// types implementing org.jmolecules.ddd.types.Identifier.
+		RelationalMappingContext context = new RelationalMappingContext();
+		context.setSimpleTypeHolder(new SimpleTypeHolder(Set.of(CompositeId.class), true));
+
+		AggregatePath.ColumnInfos columnInfos = context.getAggregatePath(context.getPersistentEntity(WithCompositeId.class))
+				.getTableInfo().idColumnInfos();
 
 		assertThat(columnInfos.isEmpty()).isFalse();
 		assertThat(columnInfos.any().name()).isEqualTo(SqlIdentifier.quoted("ONE"));

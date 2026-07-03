@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 
+import org.jmolecules.ddd.types.Identifier;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,7 +67,7 @@ class CompositeIdAggregateTemplateHsqlIntegrationTests {
 		SimpleEntity entity = template.upsert(new SimpleEntity(new WrappedPk(23L), "alpha"));
 
 		assertThat(entity.wrappedPk).isNotNull() //
-			.extracting(WrappedPk::id).isNotNull();
+				.extracting(WrappedPk::id).isNotNull();
 
 		SimpleEntity reloaded = template.findById(entity.wrappedPk, SimpleEntity.class);
 
@@ -102,7 +103,7 @@ class CompositeIdAggregateTemplateHsqlIntegrationTests {
 	void upsertAndLoadSimpleEntityWithEmbeddedPk() {
 
 		SimpleEntityWithEmbeddedPk entity = template
-			.upsert(new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "alpha"));
+				.upsert(new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "alpha"));
 
 		SimpleEntityWithEmbeddedPk reloaded = template.findById(entity.embeddedPk, SimpleEntityWithEmbeddedPk.class);
 
@@ -186,9 +187,9 @@ class CompositeIdAggregateTemplateHsqlIntegrationTests {
 	void upsertUpdatesExistingSingleSimpleEntityWithEmbeddedPk() {
 
 		List<SimpleEntityWithEmbeddedPk> entities = (List<SimpleEntityWithEmbeddedPk>) template
-			.insertAll(List.of(new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "alpha"),
-				new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "y"), "beta"),
-				new SimpleEntityWithEmbeddedPk(new EmbeddedPk(24L, "y"), "gamma")));
+				.insertAll(List.of(new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "alpha"),
+						new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "y"), "beta"),
+						new SimpleEntityWithEmbeddedPk(new EmbeddedPk(24L, "y"), "gamma")));
 
 		SimpleEntityWithEmbeddedPk updated = new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "ALPHA");
 		template.upsert(updated);
@@ -291,6 +292,17 @@ class CompositeIdAggregateTemplateHsqlIntegrationTests {
 		assertThat(projected).isEqualTo(new SimpleEntityWithEmbeddedPk(new EmbeddedPk(23L, "x"), "alpha"));
 	}
 
+	@Test // GH-2327
+	void saveAndLoadWithMolecules() {
+
+		EntityWithMolecules entity = template.insert(new EntityWithMolecules(new PkWithMolecules(23L, "x"), "alpha"));
+
+		EntityWithMolecules reloaded = template.findById(entity.embeddedPk, EntityWithMolecules.class);
+
+		assertThat(reloaded).isEqualTo(entity);
+
+	}
+
 	private record WrappedPk(Long id) {
 	}
 
@@ -327,6 +339,15 @@ class CompositeIdAggregateTemplateHsqlIntegrationTests {
 			@Id @Embedded(onEmpty = Embedded.OnEmpty.USE_NULL) EmbeddedPk embeddedPk, //
 			String name, //
 			List<Child> child) {
+	}
+
+	private record PkWithMolecules(Long one, String two) implements Identifier {
+	}
+
+	private record EntityWithMolecules( //
+			@Id @Embedded.Nullable PkWithMolecules embeddedPk, //
+			String name //
+	) {
 	}
 
 	@Configuration
