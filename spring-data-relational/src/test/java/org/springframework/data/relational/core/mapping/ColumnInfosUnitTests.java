@@ -106,6 +106,26 @@ class ColumnInfosUnitTests {
 		assertThat(collector).containsExactly("id.one+\"ONE\"", "id.two+\"TWO\"");
 	}
 
+	@Test // GH-2327
+	void multiElementColumnInfosForEmbeddedIdOfSimpleTypeResolvedBeforehand() {
+
+		RelationalMappingContext context = new RelationalMappingContext();
+		context.setSimpleTypeHolder(new SimpleTypeHolder(Set.of(CompositeId.class), true));
+
+		// Resolving the id type before the embedding entity is processed must not change the outcome. Since the type is a
+		// simple type it currently gets cached as a non-entity, which then breaks the decomposition of the embedded id.
+		context.getPersistentEntity(CompositeId.class);
+
+		AggregatePath.ColumnInfos columnInfos = context.getAggregatePath(context.getPersistentEntity(WithCompositeId.class))
+				.getTableInfo().idColumnInfos();
+
+		assertThat(columnInfos.toColumnList(TABLE)) //
+				.containsExactly( //
+						TABLE.column(SqlIdentifier.quoted("ONE")), //
+						TABLE.column(SqlIdentifier.quoted("TWO")) //
+				);
+	}
+
 	private AggregatePath getPath(Class<?> type, String name) {
 		return basePath(type).append(context.getPersistentEntity(type).getPersistentProperty(name));
 	}
