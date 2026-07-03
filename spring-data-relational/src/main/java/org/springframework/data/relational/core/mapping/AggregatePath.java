@@ -378,7 +378,7 @@ public interface AggregatePath extends Iterable<AggregatePath>, Comparable<Aggre
 			RelationalPersistentProperty idProperty = leafEntity.getRequiredIdProperty();
 			AggregatePath idPath = tableOwner.append(idProperty);
 
-			if (idProperty.isEntity()) {
+			if (idProperty.isEmbedded()) {
 				ColumInfosBuilder ciBuilder = new ColumInfosBuilder(idPath);
 				idPath.getRequiredLeafEntity().doWithProperties((PropertyHandler<RelationalPersistentProperty>) p -> {
 					AggregatePath idElementPath = idPath.append(p);

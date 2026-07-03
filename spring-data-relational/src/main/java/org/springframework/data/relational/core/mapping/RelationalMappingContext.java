@@ -16,6 +16,7 @@
 package org.springframework.data.relational.core.mapping;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.jspecify.annotations.Nullable;
@@ -47,6 +48,7 @@ public class RelationalMappingContext
 
 	private final NamingStrategy namingStrategy;
 	private final Map<AggregatePathCacheKey, AggregatePath> aggregatePathCache = new ConcurrentHashMap<>();
+	private final Set<Class<?>> embeddedTypes = ConcurrentHashMap.newKeySet();
 
 	private boolean forceQuote = true;
 
@@ -126,7 +128,9 @@ public class RelationalMappingContext
 
 		boolean embeddedDelegation = persistentProperty instanceof EmbeddedRelationalPersistentProperty;
 
-		RelationalPersistentEntity<?> entity = persistentProperty.isAssociation()
+		// Embedded properties are resolved via their type, even when the type would otherwise be considered simple (and
+		// hence super.getPersistentEntity(property) would return null), because they get decomposed into columns.
+		RelationalPersistentEntity<?> entity = persistentProperty.isAssociation() || persistentProperty.isEmbedded()
 				? getPersistentEntity(persistentProperty.getActualType())
 				: super.getPersistentEntity(persistentProperty);
 
@@ -159,6 +163,16 @@ public class RelationalMappingContext
 	}
 
 	/**
+	 * Types used as {@link Embedded} properties get decomposed into their individual columns and therefore have to be
+	 * treated as entities, even if they would otherwise be considered simple types (for example a
+	 * {@code org.jmolecules.ddd.types.Identifier} for which the jMolecules integration registers a converter).
+	 */
+	@Override
+	protected boolean shouldCreatePersistentEntityFor(TypeInformation<?> type) {
+		return super.shouldCreatePersistentEntityFor(type) || embeddedTypes.contains(type.getType());
+	}
+
+	/**
 	 * @return iff single query loading is enabled.
 	 * @since 3.2
 	 * @see #setSingleQueryLoadingEnabled(boolean)
@@ -183,6 +197,10 @@ public class RelationalMappingContext
 
 		persistentProperty.setForceQuote(isForceQuote());
 		persistentProperty.setSqlIdentifierExpressionEvaluator(this.sqlIdentifierExpressionEvaluator);
+
+		if (persistentProperty.isEmbedded()) {
+			embeddedTypes.add(persistentProperty.getActualType());
+		}
 	}
 
 	/**
