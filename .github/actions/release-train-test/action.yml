@@ -11,12 +11,23 @@ runs:
     - name: Prepare Docker Container Licenses
       shell: bash
       run: ./ci/accept-third-party-license.sh
+    - name: Prepare Maven command
+      shell: bash
+      run: |
+        MAVEN_LOGGING_OPTS=()
+        if [[ "${RUNNER_DEBUG}" == "1" || "${ACTIONS_STEP_DEBUG}" == "true" ]]; then
+          echo "::notice::transfer-progress enabled"
+        else
+          MAVEN_LOGGING_OPTS+=(--no-transfer-progress)
+        fi
+
+        echo "RELEASE_TRAIN_MVN=./mvnw --batch-mode ${MAVEN_LOGGING_OPTS[*]} --settings release-train-settings.xml clean verify -Dgpg.skip" >> "${GITHUB_ENV}"
     - name: Build Release
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean verify --activate-profiles releaseTrain,release,ci  -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,release,ci
     - name: Distribution build
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean verify --activate-profiles releaseTrain,distribute -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,distribute
     - name: Schema build
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean verify --activate-profiles releaseTrain,distribute-schema -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,distribute-schema

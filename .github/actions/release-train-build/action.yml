@@ -8,12 +8,23 @@ runs:
       run: |
         echo "::notice::Writing provided settings-xml input to release-train-settings.xml"
         echo "${RELEASE_TRAIN_SETTINGS_XML}" > release-train-settings.xml
+    - name: Prepare Maven command
+      shell: bash
+      run: |
+        MAVEN_LOGGING_OPTS=()
+        if [[ "${RUNNER_DEBUG}" == "1" || "${ACTIONS_STEP_DEBUG}" == "true" ]]; then
+          echo "::notice::transfer-progress enabled"
+        else
+          MAVEN_LOGGING_OPTS+=(--no-transfer-progress)
+        fi
+
+        echo "RELEASE_TRAIN_MVN=./mvnw --batch-mode ${MAVEN_LOGGING_OPTS[*]} --settings release-train-settings.xml clean deploy -DaltDeploymentRepository=release-train::file://$(pwd)/deployment-repository -DskipTests -Dgpg.skip" >> "${GITHUB_ENV}"
     - name: Build Release
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean deploy --activate-profiles releaseTrain,release,ci -DaltDeploymentRepository="release-train::file://$(pwd)/deployment-repository" -DskipTests -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,release,ci
     - name: Distribution build
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean deploy --activate-profiles releaseTrain,distribute -DaltDeploymentRepository="release-train::file://$(pwd)/deployment-repository" -DskipTests -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,distribute
     - name: Schema build
       shell: bash
-      run: ./mvnw --batch-mode --settings release-train-settings.xml clean deploy --activate-profiles releaseTrain,distribute-schema -DaltDeploymentRepository="release-train::file://$(pwd)/deployment-repository" -DskipTests -Dgpg.skip
+      run: ${RELEASE_TRAIN_MVN} --activate-profiles releaseTrain,distribute-schema
