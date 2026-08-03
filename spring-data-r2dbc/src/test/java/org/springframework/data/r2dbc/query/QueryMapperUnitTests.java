@@ -26,9 +26,11 @@ import java.util.List;
 import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedConstruction;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.r2dbc.convert.MappingR2dbcConverter;
 import org.springframework.data.r2dbc.convert.R2dbcConverter;
@@ -659,6 +661,47 @@ class QueryMapperUnitTests {
 		assertThat(mappedObject).extracting(Expression::toString) //
 				.hasSize(2) //
 				.contains("my_aliased_table.home_street", "my_aliased_table.home_country_name");
+	}
+
+	@Test // GH-2335
+	void derivedQueryPropertyLookupDoesNotThrow() {
+
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			BoundCondition bindings = map(Criteria.where("customerId").in(1L, 2L, 3L), Order.class);
+
+			assertThat(bindings.getCondition()).hasToString("order.customer_id IN (?[$1], ?[$2], ?[$3])");
+			assertThat(mocked.constructed()).isEmpty();
+		}
+	}
+
+	@Test // GH-2335
+	void rawColumnNameLookupIsCachedAcrossInvocations() {
+
+		// first try uses exception for flow control
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			List<OrderByField> fields = map(Sort.by("customer_id"), Order.class);
+
+			assertThat(fields).extracting(Objects::toString).containsExactly("order.customer_id ASC");
+			assertThat(mocked.constructed()).hasSize(1);
+		}
+
+		// further attempts use the cache
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			BoundCondition bindings = map(Criteria.where("customer_id").is(1L), Order.class);
+
+			assertThat(bindings.getCondition()).hasToString("order.customer_id = ?[$1]");
+			assertThat(mocked.constructed()).isEmpty();
+		}
+	}
+
+	static class Order {
+
+		@Id Long orderId;
+		Long customerId;
+		String status;
 	}
 
 	private BoundCondition map(Criteria criteria) {

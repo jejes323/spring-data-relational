@@ -22,20 +22,17 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 import org.jspecify.annotations.Nullable;
 
-import org.springframework.data.core.PropertyPath;
-import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.data.core.TypeInformation;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jdbc.core.mapping.JdbcValue;
 import org.springframework.data.jdbc.support.JdbcUtil;
-import org.springframework.data.mapping.MappingException;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.PersistentPropertyPath;
 import org.springframework.data.mapping.context.MappingContext;
+import org.springframework.data.relational.core.mapping.PropertyPathResolver;
 import org.springframework.data.relational.core.mapping.RelationalPersistentEntity;
 import org.springframework.data.relational.core.mapping.RelationalPersistentProperty;
 import org.springframework.data.relational.core.query.CriteriaDefinition;
@@ -63,6 +60,7 @@ public class QueryMapper {
 
 	private final JdbcConverter converter;
 	private final MappingContext<? extends RelationalPersistentEntity<?>, RelationalPersistentProperty> mappingContext;
+	private final PropertyPathResolver propertyPathResolver;
 
 	/**
 	 * Creates a new {@link QueryMapper} with the given {@link JdbcConverter}.
@@ -75,6 +73,7 @@ public class QueryMapper {
 
 		this.converter = converter;
 		this.mappingContext = converter.getMappingContext();
+		this.propertyPathResolver = new PropertyPathResolver(this.mappingContext);
 	}
 
 	/**
@@ -305,7 +304,7 @@ public class QueryMapper {
 
 			// IN/NOT_IN with collection of composite/embedded values: expand to (… AND …) OR (…)
 			if ((Comparator.IN.equals(comparator) || Comparator.NOT_IN.equals(comparator))
-				&& value instanceof Collection<?> collection) {
+					&& value instanceof Collection<?> collection) {
 
 				Condition condition = null;
 
@@ -760,6 +759,7 @@ public class QueryMapper {
 		public boolean isIgnoreCase() {
 			return delegate.isIgnoreCase();
 		}
+
 		@Override
 		public boolean isGroup() {
 			return false;
@@ -775,7 +775,6 @@ public class QueryMapper {
 		public SqlIdentifier getColumn() {
 			return null;
 		}
-
 
 		@Nullable
 		@Override
@@ -863,7 +862,7 @@ public class QueryMapper {
 	/**
 	 * Extension of {@link Field} to be backed with mapping metadata.
 	 */
-	protected static class MetadataBackedField extends Field {
+	protected class MetadataBackedField extends Field {
 
 		private final RelationalPersistentEntity<?> entity;
 		private final MappingContext<? extends RelationalPersistentEntity<?>, RelationalPersistentProperty> mappingContext;
@@ -891,7 +890,7 @@ public class QueryMapper {
 			this.entity = entity;
 			this.mappingContext = context;
 
-			this.path = getPath(name.getReference());
+			this.path = propertyPathResolver.resolve(entity, name.getReference());
 
 			RelationalPersistentProperty persistentProperty = null;
 			if (this.path != null) {
@@ -921,39 +920,6 @@ public class QueryMapper {
 		@Override
 		public SqlIdentifier getMappedColumnName() {
 			return this.property == null ? super.getMappedColumnName() : this.property.getColumnName();
-		}
-
-		/**
-		 * Returns the {@link PersistentPropertyPath} for the given {@code pathExpression}.
-		 */
-		@Nullable
-		private PersistentPropertyPath<RelationalPersistentProperty> getPath(String pathExpression) {
-
-			try {
-
-				PropertyPath path = forName(pathExpression);
-
-				if (isPathToJavaLangClassProperty(path)) {
-					return null;
-				}
-
-				return this.mappingContext.getPersistentPropertyPath(path);
-			} catch (MappingException | PropertyReferenceException e) {
-				return null;
-			}
-		}
-
-		private PropertyPath forName(String path) {
-
-			if (entity.getPersistentProperty(path) != null) {
-				return PropertyPath.from(Pattern.quote(path), entity.getTypeInformation());
-			}
-
-			return PropertyPath.from(path, entity.getTypeInformation());
-		}
-
-		private boolean isPathToJavaLangClassProperty(PropertyPath path) {
-			return path.getType().equals(Class.class) && path.getLeafProperty().getOwningType().getType().equals(Class.class);
 		}
 
 		@Nullable

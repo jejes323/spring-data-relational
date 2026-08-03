@@ -28,9 +28,11 @@ import java.util.Objects;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.MockedConstruction;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jdbc.core.mapping.JdbcMappingContext;
 import org.springframework.data.relational.core.mapping.Column;
@@ -567,6 +569,51 @@ public class QueryMapperUnitTests {
 		Table table = Table.create("withembeddable");
 		assertThat(orderByFields)
 				.contains(OrderByField.from(table.column(SqlIdentifier.quoted("HOME_COUNTRY_NAME")), Sort.Direction.ASC));
+	}
+
+	@Test // GH-2335
+	void derivedQueryPropertyLookupDoesNotThrow() {
+
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			Condition condition = mapper.getMappedObject(parameterSource, Criteria.where("customerId").in(1L, 2L, 3L),
+					Table.create("order"), context.getRequiredPersistentEntity(Order.class));
+
+			assertThat(condition)
+					.hasToString("order.\"CUSTOMER_ID\" IN (?[:customer_id], ?[:customer_id1], ?[:customer_id2])");
+			assertThat(mocked.constructed()).isEmpty();
+		}
+	}
+
+	@Test // GH-2335
+	void rawColumnNameLookupIsCachedAcrossInvocations() {
+
+		// first try uses exception for flow control
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			List<OrderByField> fields = mapper.getMappedSort(Table.create("order"), Sort.by("customer_id"),
+					context.getRequiredPersistentEntity(Order.class));
+
+			assertThat(fields).extracting(Objects::toString).containsExactly("order.customer_id ASC");
+			assertThat(mocked.constructed()).hasSize(1);
+		}
+
+		// further attempts use the cache
+		try (MockedConstruction<PropertyReferenceException> mocked = mockConstruction(PropertyReferenceException.class)) {
+
+			Condition condition = mapper.getMappedObject(parameterSource, Criteria.where("customer_id").is(1L),
+					Table.create("order"), context.getRequiredPersistentEntity(Order.class));
+
+			assertThat(condition).hasToString("order.customer_id = ?[:customer_id]");
+			assertThat(mocked.constructed()).isEmpty();
+		}
+	}
+
+	static class Order {
+
+		@Id Long orderId;
+		Long customerId;
+		String status;
 	}
 
 	private Condition map(Criteria criteria) {
