@@ -194,7 +194,7 @@ class MappingJdbcConverterUnitTests {
 		MappingJdbcConverter converter = new MappingJdbcConverter( //
 				context, //
 				(identifier, path) -> {
-					throw new UnsupportedOperationException();
+					throw new UnsupportedOperationException("This should not be reached");
 				}, //
 				new JdbcCustomConversions(List.of(InstantToStringConverter.INSTANCE)), //
 				typeFactory //
@@ -381,17 +381,8 @@ class MappingJdbcConverterUnitTests {
 
 	}
 
-	static class LockerWithPlainReference {
-		@Id final Long id;
-		final Integer capacity;
-		final AggregateReference<EmployeeWithCompositeId, EmployeeId> assignedTo;
-
-		LockerWithPlainReference(Long id, Integer capacity, EmployeeId assignedTo) {
-			this.id = id;
-			this.capacity = capacity;
-			this.assignedTo = AggregateReference.to(assignedTo);
-		}
-
+	record LockerWithPlainReference(@Id Long id, Integer capacity,
+			AggregateReference<EmployeeWithCompositeId, EmployeeId> assignedTo) {
 	}
 
 	static class EmployeeWithCompositeId {
