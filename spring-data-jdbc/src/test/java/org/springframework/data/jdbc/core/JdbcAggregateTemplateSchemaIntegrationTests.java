@@ -23,6 +23,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.jdbc.testing.DatabaseType;
+import org.springframework.data.jdbc.testing.DisabledOnDatabase;
 import org.springframework.data.jdbc.testing.IntegrationTest;
 import org.springframework.data.jdbc.testing.TestConfiguration;
 import org.springframework.data.relational.core.mapping.NamingStrategy;
@@ -40,6 +42,8 @@ public class JdbcAggregateTemplateSchemaIntegrationTests {
 	@Autowired NamedParameterJdbcOperations jdbcTemplate;
 
 	@Test
+	@DisabledOnDatabase(DatabaseType.ORACLE) // #2362, ORA-04043: Object "OTHER" does not exist on multi-schema key
+																						// generation
 	public void insertFindUpdateDelete() {
 
 		DummyEntity entity = new DummyEntity();
