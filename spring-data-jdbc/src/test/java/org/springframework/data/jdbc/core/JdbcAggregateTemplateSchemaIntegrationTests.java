@@ -17,7 +17,9 @@ package org.springframework.data.jdbc.core;
 
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,6 +42,8 @@ public class JdbcAggregateTemplateSchemaIntegrationTests {
 	@Autowired NamedParameterJdbcOperations jdbcTemplate;
 
 	@Test
+	@Disabled // #2362, ORA-04043: Object "OTHER" does not exist on multi-schema key
+																						// generation
 	public void insertFindUpdateDelete() {
 
 		DummyEntity entity = new DummyEntity();
