@@ -38,14 +38,6 @@ public class SqlServerTestSupport {
 
 	private static ExternalDatabase testContainerDatabase;
 
-	public static String CREATE_TABLE_LEGOSET = "CREATE TABLE legoset (\n" //
-			+ "    id          integer PRIMARY KEY,\n" //
-			+ "    version     integer NULL,\n" //
-			+ "    name        varchar(255) NOT NULL,\n" //
-			+ "    manual      integer NULL\n," //
-			+ "    cert        varbinary(255) NULL\n" //
-			+ ");";
-
 	public static String CREATE_TABLE_LEGOSET_WITH_ID_GENERATION = "CREATE TABLE legoset (\n" //
 			+ "    id          integer IDENTITY(1,1) PRIMARY KEY,\n" //
 			+ "    version     integer NULL,\n" //
@@ -70,11 +62,6 @@ public class SqlServerTestSupport {
 	 * inside Docker.
 	 */
 	public static ExternalDatabase database() {
-
-		// Disable SQL Server support as there's no M1 support yet.
-		if (ConnectionUtils.AARCH64.equals(System.getProperty("os.arch"))) {
-			return ExternalDatabase.unavailable();
-		}
 
 		if (Boolean.getBoolean("spring.data.r2dbc.test.preferLocalDatabase")) {
 
@@ -124,7 +111,7 @@ public class SqlServerTestSupport {
 		if (testContainerDatabase == null) {
 
 			try {
-				MSSQLServerContainer container = new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2022-latest") {
+				MSSQLServerContainer container = new MSSQLServerContainer("mcr.microsoft.com/mssql/server:2025-latest") {
 					@Override
 					public String getDatabaseName() {
 						return "master";
