@@ -38,7 +38,7 @@ import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
 @ConditionalOnDatabase(DatabaseType.SQL_SERVER)
 public class MsSqlDataSourceConfiguration extends DataSourceConfiguration {
 
-	public static final String MS_SQL_SERVER_VERSION = "mcr.microsoft.com/mssql/server:2022-latest";
+	public static final String MS_SQL_SERVER_VERSION = "mcr.microsoft.com/mssql/server:2025-latest";
 	private static MSSQLServerContainer MSSQL_CONTAINER;
 
 	public MsSqlDataSourceConfiguration(TestClass testClass, Environment environment) {
