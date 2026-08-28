@@ -46,7 +46,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullSource;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.PropertiesFactoryBean;
 import org.springframework.context.annotation.Bean;
@@ -64,7 +63,6 @@ import org.springframework.data.convert.ReadingConverter;
 import org.springframework.data.convert.WritingConverter;
 import org.springframework.data.domain.*;
 import org.springframework.data.jdbc.CapturingEventListener;
-import org.springframework.data.jdbc.core.JdbcAggregateOperations;
 import org.springframework.data.jdbc.core.dialect.JdbcDialect;
 import org.springframework.data.jdbc.core.mapping.AggregateReference;
 import org.springframework.data.jdbc.repository.config.JdbcConfiguration;
@@ -1245,6 +1243,26 @@ public class JdbcRepositoryIntegrationTests {
 
 		long count = repository.count(example);
 		assertThat(count).isOne();
+	}
+
+	record Fixture(String pattern, List<String> result) {
+		String[] resultArray() {
+			return result.toArray(new String[0]);
+		}
+	}
+
+	@Test // GH-2372
+	public void findAllByExampleWithAContainsMatcher() {
+
+		repository.saveAll(Arrays.asList(new DummyEntity("discount 50% off"), new DummyEntity("discount 5000 off")));
+
+		ExampleMatcher matcher = ExampleMatcher.matching().withMatcher("name",
+				ExampleMatcher.GenericPropertyMatchers.contains());
+
+		assertThat(repository.findAll(Example.of(new DummyEntity("50"), matcher))) //
+				.extracting(DummyEntity::getName)
+				.containsExactlyInAnyOrder("discount 50% off", "discount 5000 off");
+
 	}
 
 	@Test // GH-1192
