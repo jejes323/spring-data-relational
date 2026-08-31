@@ -261,6 +261,22 @@ class JdbcRepositoryContributorIntegrationTests {
 		assertThat(fragment.existsByAgeLessThan(5)).isFalse();
 	}
 
+	@Test // GH-2365
+	void findAllByAgeLessThanEqual() {
+
+		List<User> users = fragment.findAllByAgeLessThanEqual(51);
+
+		assertThat(users).extracting(User::getFirstname).containsExactlyInAnyOrder("Skyler", "Flynn", "Gustavo");
+	}
+
+	@Test // GH-2365
+	void findAllByAgeGreaterThanEqual() {
+
+		List<User> users = fragment.findAllByAgeGreaterThanEqual(51);
+
+		assertThat(users).extracting(User::getFirstname).containsExactlyInAnyOrder("Walter", "Mike", "Gustavo", "Hector");
+	}
+
 	@Test // GH-2121
 	void listWithLimit() {
 

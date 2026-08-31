@@ -66,6 +66,10 @@ public interface UserRepository extends CrudRepository<User, Integer> {
 
 	boolean existsByAgeLessThan(int age);
 
+	List<User> findAllByAgeLessThanEqual(int age);
+
+	List<User> findAllByAgeGreaterThanEqual(int age);
+
 	List<User> findTop5ByOrderByAge();
 
 	Slice<User> findSliceByAgeGreaterThan(Pageable pageable, int age);

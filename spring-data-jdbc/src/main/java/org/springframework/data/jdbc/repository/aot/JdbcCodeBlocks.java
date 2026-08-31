@@ -360,7 +360,7 @@ class JdbcCodeBlocks {
 				case LT -> builder.add(".lessThan($L)", renderPlaceholder(value));
 				case LTE -> builder.add(".lessThanOrEquals($L)", renderPlaceholder(value));
 				case GT -> builder.add(".greaterThan($L)", renderPlaceholder(value));
-				case GTE -> builder.add(".greaterThanEquals($L)", renderPlaceholder(value));
+				case GTE -> builder.add(".greaterThanOrEquals($L)", renderPlaceholder(value));
 				case IS_NULL -> builder.add(".isNull()");
 				case IS_NOT_NULL -> builder.add(".isNotNull()");
 				case LIKE -> applyLike(builder, "like", value);
